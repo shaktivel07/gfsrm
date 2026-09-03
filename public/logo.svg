@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="100%" height="100%">
+  <defs>
+    <!-- Filter for subtle depth -->
+    <filter id="badgeShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Main Ornate Crest Path -->
+  <g filter="url(#badgeShadow)">
+    <!-- Outer Contour in Deep Crimson -->
+    <path d="M 300 22 
+             C 308 38, 318 50, 332 58 
+             C 362 76, 396 74, 420 88 
+             C 450 106, 460 134, 464 162 
+             C 472 178, 492 184, 520 190 
+             C 492 196, 472 202, 464 218 
+             C 460 246, 450 274, 420 292 
+             C 396 306, 362 304, 332 322 
+             C 318 330, 308 342, 300 358 
+             C 292 342, 282 330, 268 322 
+             C 238 304, 204 306, 180 292 
+             C 150 274, 140 246, 136 218 
+             C 128 202, 108 196, 80 190 
+             C 108 184, 128 178, 136 162 
+             C 140 134, 150 106, 180 88 
+             C 204 74, 238 76, 268 58 
+             C 282 50, 292 38, 300 22 Z"
+          fill="#942626"
+          stroke="#741a1a"
+          stroke-width="2"/>
+
+    <!-- Inner White Inset Border -->
+    <path d="M 300 34 
+             C 307 48, 316 58, 328 65 
+             C 356 82, 388 80, 410 93 
+             C 437 109, 446 134, 450 160 
+             C 457 174, 476 182, 498 190 
+             C 476 198, 457 206, 450 220 
+             C 446 246, 437 271, 410 287 
+             C 388 300, 356 298, 328 315 
+             C 316 322, 307 332, 300 346 
+             C 293 332, 284 322, 272 315 
+             C 244 298, 212 300, 190 287 
+             C 163 271, 154 246, 150 220 
+             C 143 206, 124 198, 102 190 
+             C 124 182, 143 174, 150 160 
+             C 154 134, 163 109, 190 93 
+             C 212 80, 244 82, 272 65 
+             C 284 58, 293 48, 300 34 Z"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="4.5"
+          stroke-linejoin="round"/>
+  </g>
+
+  <!-- Chef Hat Emblem with SRM -->
+  <g transform="translate(300, 112)">
+    <!-- Chef Hat outline in Gold -->
+    <path d="M -32 14 C -34 6, -38 -2, -34 -14 C -28 -28, -14 -24, -12 -34 C -10 -44, 10 -44, 12 -34 C 14 -24, 28 -28, 34 -14 C 38 -2, 34 6, 32 14 Z"
+          fill="none"
+          stroke="#f6ce72"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <!-- Hat band -->
+    <path d="M -30 14 C -20 18, 20 18, 30 14 C 28 20, -28 20, -30 14 Z"
+          fill="none"
+          stroke="#f6ce72"
+          stroke-width="2.5"/>
+    <!-- Hat pleat subtle lines -->
+    <path d="M -18 10 C -16 -4, -20 -18, -18 -24" fill="none" stroke="#f6ce72" stroke-width="1.8" stroke-dasharray="2,3"/>
+    <path d="M 0 10 C 0 -6, 0 -22, 0 -32" fill="none" stroke="#f6ce72" stroke-width="1.8" stroke-dasharray="2,3"/>
+    <path d="M 18 10 C 16 -4, 20 -18, 18 -24" fill="none" stroke="#f6ce72" stroke-width="1.8" stroke-dasharray="2,3"/>
+    <!-- SRM Text inside Hat -->
+    <text x="0" y="4"
+          font-family="'Playfair Display', Georgia, serif"
+          font-size="18"
+          font-weight="700"
+          letter-spacing="3"
+          fill="#f6ce72"
+          text-anchor="middle">SRM</text>
+  </g>
+
+  <!-- Main "Good Foods" Typography -->
+  <!-- Styled after elegant classic script calligraphy -->
+  <g>
+    <text x="300" y="215"
+          font-family="'Playfair Display', 'Brush Script MT', cursive, Georgia, serif"
+          font-size="64"
+          font-weight="700"
+          font-style="italic"
+          fill="#f6ce72"
+          text-anchor="middle"
+          letter-spacing="1">Good Foods</text>
+  </g>
+
+  <!-- 5 Golden Stars Arc -->
+  <g fill="#f6ce72">
+    <!-- Star 1 (Leftmost) -->
+    <path d="M 235 248 L 237.5 254 L 243.5 254.5 L 239 258.5 L 240.5 264.5 L 235 261 L 229.5 264.5 L 231 258.5 L 226.5 254.5 L 232.5 254 Z"/>
+    <!-- Star 2 (Left-Mid) -->
+    <path d="M 264 254 L 266.5 260 L 272.5 260.5 L 268 264.5 L 269.5 270.5 L 264 267 L 258.5 270.5 L 260 264.5 L 255.5 260.5 L 261.5 260 Z"/>
+    <!-- Star 3 (Center) -->
+    <path d="M 300 256 L 302.5 262 L 308.5 262.5 L 304 266.5 L 305.5 272.5 L 300 269 L 294.5 272.5 L 296 266.5 L 291.5 262.5 L 297.5 262 Z"/>
+    <!-- Star 4 (Right-Mid) -->
+    <path d="M 336 254 L 338.5 260 L 344.5 260.5 L 340 264.5 L 341.5 270.5 L 336 267 L 330.5 270.5 L 332 264.5 L 327.5 260.5 L 333.5 260 Z"/>
+    <!-- Star 5 (Rightmost) -->
+    <path d="M 365 248 L 367.5 254 L 373.5 254.5 L 369 258.5 L 370.5 264.5 L 365 261 L 359.5 264.5 L 361 258.5 L 356.5 254.5 L 362.5 254 Z"/>
+  </g>
+</svg>

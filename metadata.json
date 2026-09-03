@@ -1,0 +1,6 @@
+{
+  "name": "SRM Good Foods",
+  "description": "Restaurant food ordering system with Firebase authentication, Razorpay payments, kitchen prep portal, delivery agent dashboard with OTP verification, and store admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
