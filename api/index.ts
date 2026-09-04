@@ -1233,12 +1233,35 @@ router.post('/admin/clear-orders', async (req: Request, res: Response) => {
   }
 });
 
-// Mount router on both '/api' and root '/' so both rewritten and non-rewritten URLs match
+// Mount router on both '/api' and root '/'
 app.use('/api', router);
 app.use('/', router);
 
-// Catch-all 404 handler for API routes
-app.use((_req: Request, res: Response) => {
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Resolve the Vite static build directory (supports dist/api/index.js on Render or local execution)
+const distPath = fs.existsSync(path.join(__dirname, '../../dist'))
+  ? path.join(__dirname, '../../dist')
+  : fs.existsSync(path.join(__dirname, '../dist'))
+  ? path.join(__dirname, '../dist')
+  : path.join(process.cwd(), 'dist');
+
+// Serve Vite build static assets
+app.use(express.static(distPath));
+
+// Fallback to index.html for client-side SPA routing (only for non-API routes)
+app.get('*', (req: Request, res: Response) => {
+  if (!req.path.startsWith('/api')) {
+    const indexPath = path.join(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+  }
   res.status(404).json({ error: 'API route not found' });
 });
 
@@ -1253,5 +1276,13 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
   }
 });
 
-// Export Express app as standard Vercel Serverless Function entry point
+const PORT = process.env.PORT || 3000;
+
+// Start server on Render or standalone Node; Vite handles routing in dev mode
+if (!process.env.VITE_DEV_SERVER) {
+  app.listen(PORT, () => {
+    console.log(`SRM Good Foods running on ${PORT}`);
+  });
+}
+
 export default app;

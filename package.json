@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && esbuild api/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/api/index.js && tsc",
+    "start": "node dist/api/index.js",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "smoke-test": "node scripts/smoke-test.mjs"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

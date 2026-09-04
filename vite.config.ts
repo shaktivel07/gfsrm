@@ -9,8 +9,9 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       {
-        name: 'vercel-api-dev-server',
+        name: 'express-api-dev-server',
         configureServer(server) {
+          process.env.VITE_DEV_SERVER = 'true';
           let appPromise: Promise<any> | null = null;
           const getApp = () => {
             if (!appPromise) {
