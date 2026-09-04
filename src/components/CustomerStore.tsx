@@ -20,6 +20,9 @@ interface CustomerStoreProps {
   items: FoodItem[];
   settings: RestaurantSettings | null;
   cart: CartItem[];
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   onAddToCart: (item: FoodItem) => void;
   onUpdateQuantity: (itemId: number, delta: number) => void;
   onOpenCart: () => void;
@@ -30,6 +33,9 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
   items,
   settings,
   cart,
+  isLoading = false,
+  error = null,
+  onRetry,
   onAddToCart,
   onUpdateQuantity,
   onOpenCart,
@@ -181,14 +187,54 @@ export const CustomerStore: React.FC<CustomerStoreProps> = ({
         </div>
       </div>
 
+      {/* Network Alert Banner */}
+      {error && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-amber-900 text-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Menu service update: {error}</span>
+          </div>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-xs"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Food Items Grid */}
-      {filteredItems.length === 0 ? (
+      {isLoading && items.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-sm p-4 animate-pulse space-y-3"
+            >
+              <div className="h-44 bg-stone-200 rounded-xl" />
+              <div className="h-4 bg-stone-200 rounded w-3/4" />
+              <div className="h-3 bg-stone-100 rounded w-1/2" />
+              <div className="h-8 bg-stone-200 rounded-xl mt-4" />
+            </div>
+          ))}
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-stone-200 p-8 shadow-sm">
           <Info className="w-10 h-10 text-stone-400 mx-auto mb-2" />
           <h3 className="font-bold text-stone-700 text-sm">No items found</h3>
           <p className="text-xs text-stone-500 mt-1">
             Try choosing a different category or search keyword.
           </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-4 px-4 py-2 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all"
+            >
+              Refresh Menu
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

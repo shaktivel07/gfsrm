@@ -5,8 +5,10 @@
   "outputDirectory": "dist",
   "functions": {
     "api/index.ts": {
+      "runtime": "@vercel/node",
       "memory": 1024,
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "api/**"
     }
   },
   "rewrites": [

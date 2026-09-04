@@ -1,8 +1,8 @@
 import express, { Request, Response, Router } from 'express';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { pool, ensureDatabaseReady, logAudit } from './db';
-import { razorpay, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from './razorpay';
+import { pool, ensureDatabaseReady, logAudit } from './db.js';
+import { razorpay, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from './razorpay.js';
 
 dotenv.config();
 
@@ -54,11 +54,16 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const KITCHEN_PASSWORD = process.env.KITCHEN_PASSWORD;
 const DELIVERY_PASSWORD = process.env.DELIVERY_PASSWORD;
 
+const matchPassword = (input: string, envVal?: string): boolean => {
+  if (!envVal || !input) return false;
+  return envVal.split(',').map((p) => p.trim()).includes(input);
+};
+
 // Main API Router containing all REST endpoints
 const router = Router();
 
 // -------------------------------------------------------------
-// 1. HEALTH CHECK
+// 1. HEALTH CHECK & SMOKE TEST
 // -------------------------------------------------------------
 router.get('/health', async (_req: Request, res: Response) => {
   try {
@@ -74,6 +79,104 @@ router.get('/health', async (_req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ status: 'error', message: err.message });
   }
+});
+
+router.get('/smoke-test', async (_req: Request, res: Response) => {
+  const checks: Record<string, { status: 'pass' | 'fail' | 'warn'; details: any }> = {};
+
+  // 1. Database connection check
+  try {
+    await ensureDatabaseReady();
+    const dbStart = Date.now();
+    const dbRes = await pool.query(`
+      SELECT 
+        NOW() as server_time,
+        current_database() as db_name,
+        (SELECT count(*) FROM food_categories)::int as categories_count,
+        (SELECT count(*) FROM food_items)::int as items_count,
+        (SELECT count(*) FROM delivery_locations)::int as locations_count
+    `);
+    const latency = Date.now() - dbStart;
+    checks.database = {
+      status: 'pass',
+      details: {
+        connected: true,
+        latency_ms: latency,
+        database: dbRes.rows[0].db_name,
+        categories_count: dbRes.rows[0].categories_count,
+        items_count: dbRes.rows[0].items_count,
+        locations_count: dbRes.rows[0].locations_count,
+      },
+    };
+  } catch (err: any) {
+    checks.database = {
+      status: 'fail',
+      details: {
+        connected: false,
+        error: err.message,
+      },
+    };
+  }
+
+  // 2. Required Environment Variables check
+  const requiredVars = [
+    'DATABASE_URL',
+    'ADMIN_PASSWORD',
+    'KITCHEN_PASSWORD',
+    'DELIVERY_PASSWORD',
+  ];
+  const missingVars = requiredVars.filter((v) => !process.env[v]);
+  const configuredVars = requiredVars.filter((v) => !!process.env[v]);
+
+  checks.environment_variables = {
+    status: missingVars.length === 0 ? 'pass' : 'fail',
+    details: {
+      configured_count: configuredVars.length,
+      total_required: requiredVars.length,
+      missing: missingVars,
+      admin_emails_configured: ADMIN_EMAILS.length > 0,
+    },
+  };
+
+  // 3. Razorpay initialization check
+  const hasRazorpayKey = !!RAZORPAY_KEY_ID && RAZORPAY_KEY_ID !== 'rzp_placeholder';
+  const hasRazorpaySecret = !!RAZORPAY_KEY_SECRET && RAZORPAY_KEY_SECRET !== 'secret_placeholder';
+  checks.razorpay = {
+    status: hasRazorpayKey && hasRazorpaySecret ? 'pass' : 'warn',
+    details: {
+      key_id_set: !!RAZORPAY_KEY_ID,
+      key_id_prefix: RAZORPAY_KEY_ID ? `${RAZORPAY_KEY_ID.substring(0, 8)}...` : 'not set',
+      secret_set: !!RAZORPAY_KEY_SECRET,
+      client_initialized: typeof razorpay?.orders?.create === 'function',
+      message: hasRazorpayKey && hasRazorpaySecret 
+        ? 'Razorpay credentials configured' 
+        : 'Razorpay keys not configured (COD fallback mode active)',
+    },
+  };
+
+  // 4. Firebase configuration check
+  const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || '';
+  const firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || '';
+  const hasFirebase = !!firebaseProjectId || !!firebaseApiKey;
+  checks.firebase = {
+    status: hasFirebase ? 'pass' : 'warn',
+    details: {
+      project_id: firebaseProjectId ? `${firebaseProjectId.substring(0, 8)}...` : 'not set',
+      api_key_configured: !!firebaseApiKey,
+      message: hasFirebase ? 'Firebase parameters detected' : 'Firebase parameters not configured in environment',
+    },
+  };
+
+  const isAllPassing = checks.database.status === 'pass' && checks.environment_variables.status === 'pass';
+  const httpStatus = isAllPassing ? 200 : 503;
+
+  res.status(httpStatus).json({
+    status: isAllPassing ? 'healthy' : 'degraded',
+    checks_passed: Object.values(checks).filter((c) => c.status === 'pass').length,
+    total_checks: Object.keys(checks).length,
+    timestamp: new Date().toISOString(),
+    checks,
+  });
 });
 
 // -------------------------------------------------------------
@@ -167,7 +270,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     'kitchen@srmist.edu.in',
     'srm@srmist.edu.in',
   ].includes(normalized);
-  if (isKitchenUser && KITCHEN_PASSWORD && password === KITCHEN_PASSWORD) {
+  if (isKitchenUser && matchPassword(password, KITCHEN_PASSWORD)) {
     return res.json({
       portal: 'KITCHEN',
       user: {
@@ -187,7 +290,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     'delivery@srmist.edu.in',
     'rider@srmgoodfoods.com',
   ].includes(normalized);
-  if (isDeliveryUser && DELIVERY_PASSWORD && password === DELIVERY_PASSWORD) {
+  if (isDeliveryUser && matchPassword(password, DELIVERY_PASSWORD)) {
     return res.json({
       portal: 'DELIVERY',
       user: {
@@ -206,7 +309,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     normalized === 'admin@srmgoodfoods.com' ||
     normalized === 'admin@srmist.edu.in' ||
     ADMIN_EMAILS.includes(normalized);
-  if (isAdminUser && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
+  if (isAdminUser && matchPassword(password, ADMIN_PASSWORD)) {
     return res.json({
       portal: 'ADMIN',
       user: {
@@ -225,7 +328,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
       "SELECT id, name, email, role FROM users WHERE LOWER(email) = $1 AND role = 'ADMIN' LIMIT 1",
       [normalized]
     );
-    if (dbAdmin.rows.length > 0 && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
+    if (dbAdmin.rows.length > 0 && matchPassword(password, ADMIN_PASSWORD)) {
       const u = dbAdmin.rows[0];
       return res.json({
         portal: 'ADMIN',

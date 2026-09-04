@@ -11,13 +11,33 @@ export default defineConfig(() => {
       {
         name: 'vercel-api-dev-server',
         configureServer(server) {
+          let appPromise: Promise<any> | null = null;
+          const getApp = () => {
+            if (!appPromise) {
+              appPromise = server
+                .ssrLoadModule('./api/index.ts')
+                .then((mod) => mod.default)
+                .catch((err) => {
+                  appPromise = null;
+                  throw err;
+                });
+            }
+            return appPromise;
+          };
+
+          server.watcher.on('change', (file) => {
+            if (file.includes('/api/')) {
+              appPromise = null;
+            }
+          });
+
           server.middlewares.use(async (req, res, next) => {
             if (req.url && (req.url.startsWith('/api/') || req.url === '/api')) {
               try {
-                const apiModule = await server.ssrLoadModule('./api/index.ts');
-                const app = apiModule.default;
+                const app = await getApp();
                 return app(req, res, next);
               } catch (err) {
+                appPromise = null;
                 console.error('API middleware error:', err);
                 return next(err);
               }

@@ -93,6 +93,8 @@ export default function App() {
   const [locations, setLocations] = useState<DeliveryLocation[]>([]);
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [isLoadingPublicData, setIsLoadingPublicData] = useState<boolean>(true);
+  const [publicDataError, setPublicDataError] = useState<string | null>(null);
 
   // Cart State with LocalStorage sync
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -112,22 +114,55 @@ export default function App() {
     }
   }, [cart]);
 
-  // Load Initial Public Data
-  const loadPublicData = async () => {
+  // Load Initial Public Data with resilient Promise.allSettled and automatic retry
+  const loadPublicData = async (retryCount = 0) => {
+    setIsLoadingPublicData(true);
     try {
-      const [cats, its, locs, sets] = await Promise.all([
+      const [catsRes, itsRes, locsRes, setsRes] = await Promise.allSettled([
         apiFetch<FoodCategory[]>('/api/categories'),
         apiFetch<FoodItem[]>('/api/items'),
         apiFetch<DeliveryLocation[]>('/api/locations'),
         apiFetch<RestaurantSettings>('/api/settings'),
       ]);
 
-      if (cats) setCategories(cats);
-      if (its) setItems(its);
-      if (locs) setLocations(locs);
-      if (sets) setSettings(sets);
-    } catch (err) {
-      console.error('Error fetching public menu data:', err);
+      let hasItems = false;
+      if (catsRes.status === 'fulfilled' && catsRes.value) {
+        setCategories(catsRes.value);
+      }
+      if (itsRes.status === 'fulfilled' && itsRes.value) {
+        setItems(itsRes.value);
+        if (itsRes.value.length > 0) hasItems = true;
+      }
+      if (locsRes.status === 'fulfilled' && locsRes.value) {
+        setLocations(locsRes.value);
+      }
+      if (setsRes.status === 'fulfilled' && setsRes.value) {
+        setSettings(setsRes.value);
+      }
+
+      if (!hasItems) {
+        const errorMsg =
+          (catsRes.status === 'rejected' ? catsRes.reason?.message : null) ||
+          (itsRes.status === 'rejected' ? itsRes.reason?.message : null) ||
+          'Menu data could not be retrieved';
+
+        if (retryCount < 2) {
+          setTimeout(() => loadPublicData(retryCount + 1), 1200);
+          return;
+        }
+        setPublicDataError(errorMsg);
+      } else {
+        setPublicDataError(null);
+      }
+    } catch (err: any) {
+      if (retryCount < 2) {
+        setTimeout(() => loadPublicData(retryCount + 1), 1200);
+        return;
+      }
+      console.warn('Error fetching public menu data after retries:', err);
+      setPublicDataError(err?.message || 'Failed to connect to menu server');
+    } finally {
+      setIsLoadingPublicData(false);
     }
   };
 
@@ -509,6 +544,9 @@ export default function App() {
             items={items}
             settings={settings}
             cart={cart}
+            isLoading={isLoadingPublicData}
+            error={publicDataError}
+            onRetry={() => loadPublicData(0)}
             onAddToCart={handleAddToCart}
             onUpdateQuantity={handleUpdateQuantity}
             onOpenCart={() => setIsCartOpen(true)}
