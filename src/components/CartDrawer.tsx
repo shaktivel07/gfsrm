@@ -13,6 +13,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { FoodItem, DeliveryLocation, UserProfile } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface CartItem extends FoodItem {
   quantity: number;
@@ -97,27 +98,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     try {
       // Step A: Create order on backend with Razorpay API
-      const createRes = await fetch('/api/orders/create-razorpay-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firebase_uid: user.firebase_uid,
-          items: cart.map((i) => ({ food_item_id: i.id, quantity: i.quantity, name: i.name })),
-        }),
-      });
-
-      const createData = await createRes.json();
-      if (!createRes.ok) {
-        if (createData.code === 'PHONE_REQUIRED') {
+      let createData: any;
+      try {
+        createData = await apiFetch<any>('/api/orders/create-razorpay-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firebase_uid: user.firebase_uid,
+            items: cart.map((i) => ({ food_item_id: i.id, quantity: i.quantity, name: i.name })),
+          }),
+        });
+      } catch (err: any) {
+        if (err.message && err.message.includes('PHONE_REQUIRED')) {
           onRequirePhone();
           return;
         }
-        throw new Error(createData.error || 'Failed to initiate Razorpay order');
+        throw err;
       }
 
       // Step B: Launch Razorpay Checkout Popup
       const options = {
-        key: createData.key_id || 'rzp_test_TXY51X8Iwi53nE',
+        key: createData.key_id || (import.meta.env.VITE_RAZORPAY_KEY_ID as string) || '',
         amount: createData.amount,
         currency: createData.currency || 'INR',
         name: 'SRM Good Foods',
@@ -140,7 +141,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         handler: async (response: any) => {
           // Step C: Verify Razorpay signature server-side and record order in PostgreSQL
           try {
-            const verifyRes = await fetch('/api/orders/verify-and-place', {
+            const verifyData = await apiFetch<any>('/api/orders/verify-and-place', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -153,11 +154,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 items: cart.map((i) => ({ food_item_id: i.id, quantity: i.quantity })),
               }),
             });
-
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok) {
-              throw new Error(verifyData.error || 'Payment verification failed');
-            }
 
             // Successfully recorded in PostgreSQL
             onClearCart();

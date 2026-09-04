@@ -32,6 +32,7 @@ import {
   UserProfile,
   Order,
 } from './types';
+import { apiFetch } from './lib/api';
 
 interface CartItem extends FoodItem {
   quantity: number;
@@ -114,17 +115,17 @@ export default function App() {
   // Load Initial Public Data
   const loadPublicData = async () => {
     try {
-      const [catRes, itemRes, locRes, setRes] = await Promise.all([
-        fetch('/api/categories'),
-        fetch('/api/items'),
-        fetch('/api/locations'),
-        fetch('/api/settings'),
+      const [cats, its, locs, sets] = await Promise.all([
+        apiFetch<FoodCategory[]>('/api/categories'),
+        apiFetch<FoodItem[]>('/api/items'),
+        apiFetch<DeliveryLocation[]>('/api/locations'),
+        apiFetch<RestaurantSettings>('/api/settings'),
       ]);
 
-      if (catRes.ok) setCategories(await catRes.json());
-      if (itemRes.ok) setItems(await itemRes.json());
-      if (locRes.ok) setLocations(await locRes.json());
-      if (setRes.ok) setSettings(await setRes.json());
+      if (cats) setCategories(cats);
+      if (its) setItems(its);
+      if (locs) setLocations(locs);
+      if (sets) setSettings(sets);
     } catch (err) {
       console.error('Error fetching public menu data:', err);
     }
@@ -206,7 +207,7 @@ export default function App() {
       setFirebaseUser(user);
       if (user) {
         try {
-          const res = await fetch('/api/auth/sync-user', {
+          const data = await apiFetch<any>('/api/auth/sync-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -216,14 +217,11 @@ export default function App() {
               phone: user.phoneNumber,
             }),
           });
-          if (res.ok) {
-            const data = await res.json();
-            const profile = data.user || data;
-            updateCustomerProfile(profile);
-            // If phone is missing, prompt customer immediately
-            if (!profile.phone) {
-              setIsPhoneModalOpen(true);
-            }
+          const profile = data.user || data;
+          updateCustomerProfile(profile);
+          // If phone is missing, prompt customer immediately
+          if (!profile.phone) {
+            setIsPhoneModalOpen(true);
           }
         } catch (err) {
           console.error('Failed to sync customer with PostgreSQL:', err);

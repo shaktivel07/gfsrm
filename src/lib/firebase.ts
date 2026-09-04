@@ -3,23 +3,21 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
 
-// SRM Good Foods — Firebase Configuration
+// SRM Good Foods — Firebase Configuration (configured via environment variables)
 const env = (import.meta as any).env || {};
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyAh_wDRiQEmmcRMN8TIlQH_YrkB-ARyIRk',
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'srmgoodfoods-trichy.firebaseapp.com',
-  projectId: env.VITE_FIREBASE_PROJECT_ID || 'srmgoodfoods-trichy',
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'srmgoodfoods-trichy.firebasestorage.app',
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '444885932223',
-  appId: env.VITE_FIREBASE_APP_ID || '1:444885932223:web:6b08572b5d412e7d280e0a',
-  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || 'G-FWQNMKEV10',
+  apiKey: env.VITE_FIREBASE_API_KEY || '',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: env.VITE_FIREBASE_APP_ID || '',
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || '',
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -28,8 +26,6 @@ export const googleProvider = new GoogleAuthProvider();
 
 export {
   signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 };

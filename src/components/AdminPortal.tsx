@@ -32,6 +32,7 @@ import {
   UserProfile,
 } from '../types';
 import { Logo } from './Logo';
+import { apiFetch } from '../lib/api';
 
 interface AdminPortalProps {
   onLogout: () => void;
@@ -78,21 +79,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout, currentUser 
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [anRes, catRes, itRes, locRes, setRes, usRes] = await Promise.all([
-        fetch('/api/admin/analytics'),
-        fetch('/api/categories'),
-        fetch('/api/items?all=true'),
-        fetch('/api/locations?all=true'),
-        fetch('/api/settings'),
-        fetch('/api/admin/users'),
+      const [an, cats, its, locs, sets, us] = await Promise.all([
+        apiFetch<AnalyticsData>('/api/admin/analytics').catch(() => null),
+        apiFetch<FoodCategory[]>('/api/categories').catch(() => []),
+        apiFetch<FoodItem[]>('/api/items?all=true').catch(() => []),
+        apiFetch<DeliveryLocation[]>('/api/locations?all=true').catch(() => []),
+        apiFetch<RestaurantSettings>('/api/settings').catch(() => null),
+        apiFetch<UserProfile[]>('/api/admin/users').catch(() => []),
       ]);
 
-      if (anRes.ok) setAnalytics(await anRes.json());
-      if (catRes.ok) setCategories(await catRes.json());
-      if (itRes.ok) setItems(await itRes.json());
-      if (locRes.ok) setLocations(await locRes.json());
-      if (setRes.ok) setSettings(await setRes.json());
-      if (usRes.ok) setUsers(await usRes.json());
+      if (an) setAnalytics(an);
+      if (cats) setCategories(cats);
+      if (its) setItems(its);
+      if (locs) setLocations(locs);
+      if (sets) setSettings(sets);
+      if (us) setUsers(us);
     } catch (err) {
       console.error('Error fetching admin data:', err);
     } finally {
@@ -115,16 +116,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout, currentUser 
     if (!settings) return;
 
     try {
-      const res = await fetch('/api/settings', {
+      await apiFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-      if (res.ok) {
-        flashMessage('Shop timings and status updated successfully in PostgreSQL');
-      }
+      flashMessage('Shop timings and status updated successfully in PostgreSQL');
     } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to save settings'}`);
     }
   };
 
@@ -132,19 +132,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout, currentUser 
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/categories', {
+      await apiFetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(categoryForm),
       });
-      if (res.ok) {
-        setIsCategoryModalOpen(false);
-        setCategoryForm({ name: '', display_order: 1, is_active: true });
-        flashMessage('Category added successfully');
-        loadAllData();
-      }
-    } catch (err) {
+      setIsCategoryModalOpen(false);
+      setCategoryForm({ name: '', display_order: 1, is_active: true });
+      flashMessage('Category added successfully');
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to add category'}`);
     }
   };
 
@@ -161,33 +160,31 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout, currentUser 
         available_end_time: itemForm.available_end_time || null,
       };
 
-      const res = await fetch(url, {
+      await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        setIsItemModalOpen(false);
-        setEditingItem(null);
-        flashMessage(`Food item ${editingItem ? 'updated' : 'added'} successfully`);
-        loadAllData();
-      }
-    } catch (err) {
+      setIsItemModalOpen(false);
+      setEditingItem(null);
+      flashMessage(`Food item ${editingItem ? 'updated' : 'added'} successfully`);
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to save food item'}`);
     }
   };
 
   const handleDeleteItem = async (id: number) => {
     if (!confirm('Are you sure you want to remove this food item?')) return;
     try {
-      const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        flashMessage('Item removed');
-        loadAllData();
-      }
-    } catch (err) {
+      await apiFetch(`/api/items/${id}`, { method: 'DELETE' });
+      flashMessage('Item removed');
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to remove item'}`);
     }
   };
 
@@ -195,68 +192,62 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout, currentUser 
   const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/locations', {
+      await apiFetch('/api/locations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(locationForm),
       });
-      if (res.ok) {
-        setIsLocationModalOpen(false);
-        setLocationForm({ name: '', description: '', is_active: true });
-        flashMessage('Delivery location added');
-        loadAllData();
-      }
-    } catch (err) {
+      setIsLocationModalOpen(false);
+      setLocationForm({ name: '', description: '', is_active: true });
+      flashMessage('Delivery location added');
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to add location'}`);
     }
   };
 
   const handleToggleLocationStatus = async (loc: DeliveryLocation) => {
     try {
-      const res = await fetch(`/api/locations/${loc.id}`, {
+      await apiFetch(`/api/locations/${loc.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !loc.is_active }),
       });
-      if (res.ok) {
-        flashMessage(`Location ${!loc.is_active ? 'activated' : 'deactivated'}`);
-        loadAllData();
-      }
-    } catch (err) {
+      flashMessage(`Location ${!loc.is_active ? 'activated' : 'deactivated'}`);
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to update location'}`);
     }
   };
 
   const handleDeleteLocation = async (id: number) => {
     if (!confirm('Are you sure you want to delete or deactivate this campus location?')) return;
     try {
-      const res = await fetch(`/api/locations/${id}?hard=true`, { method: 'DELETE' });
-      if (res.ok) {
-        const data = await res.json();
-        flashMessage(data.message || 'Location removed');
-        loadAllData();
-      }
-    } catch (err) {
+      const data = await apiFetch<any>(`/api/locations/${id}?hard=true`, { method: 'DELETE' });
+      flashMessage(data?.message || 'Location removed');
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to delete location'}`);
     }
   };
 
   // 5. Storage optimization: Clear orders handler
   const handleExecuteClearOrders = async () => {
     try {
-      const res = await fetch('/api/admin/clear-orders', {
+      const data = await apiFetch<any>('/api/admin/clear-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: clearMode }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setClearModalOpen(false);
-        flashMessage(data.message || 'Orders table cleared successfully');
-        loadAllData();
-      }
-    } catch (err) {
+      setClearModalOpen(false);
+      flashMessage(data?.message || 'Orders table cleared successfully');
+      loadAllData();
+    } catch (err: any) {
       console.error(err);
+      flashMessage(`Error: ${err?.message || 'Failed to clear orders'}`);
     }
   };
 

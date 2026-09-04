@@ -19,24 +19,40 @@ app.use((req: any, _res: any, next: any) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// CORS & Preflight middleware
+app.use((req: Request, res: Response, next: any) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Lazy DB schema ensure middleware
-app.use(async (_req: Request, _res: Response, next: any) => {
+app.use(async (_req: Request, res: Response, next: any) => {
   try {
     await ensureDatabaseReady();
     next();
-  } catch (err) {
+  } catch (err: any) {
     console.error('Database connection error in API:', err);
-    next(err);
+    return res.status(500).json({
+      error: `Database connection error: ${err?.message || 'Failed to connect to Supabase'}`,
+      code: 'DB_CONNECTION_ERROR'
+    });
   }
 });
 
-// Authorized admin emails
-const ADMIN_EMAILS = (
-  process.env.ADMIN_EMAILS ||
-  'shaktivelkumaresan07@gmail.com,admin@srmgoodfoods.com,admin@srm.edu.in'
-)
+// Authorized admin emails (configured via ADMIN_EMAILS in .env)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
-  .map((e) => e.trim().toLowerCase());
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const KITCHEN_PASSWORD = process.env.KITCHEN_PASSWORD;
+const DELIVERY_PASSWORD = process.env.DELIVERY_PASSWORD;
 
 // Main API Router containing all REST endpoints
 const router = Router();
@@ -151,7 +167,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     'kitchen@srmist.edu.in',
     'srm@srmist.edu.in',
   ].includes(normalized);
-  if (isKitchenUser && password === 'srm123') {
+  if (isKitchenUser && KITCHEN_PASSWORD && password === KITCHEN_PASSWORD) {
     return res.json({
       portal: 'KITCHEN',
       user: {
@@ -171,7 +187,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     'delivery@srmist.edu.in',
     'rider@srmgoodfoods.com',
   ].includes(normalized);
-  if (isDeliveryUser && password === 'delivery123') {
+  if (isDeliveryUser && DELIVERY_PASSWORD && password === DELIVERY_PASSWORD) {
     return res.json({
       portal: 'DELIVERY',
       user: {
@@ -190,7 +206,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
     normalized === 'admin@srmgoodfoods.com' ||
     normalized === 'admin@srmist.edu.in' ||
     ADMIN_EMAILS.includes(normalized);
-  if (isAdminUser && password === 'admin123') {
+  if (isAdminUser && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
     return res.json({
       portal: 'ADMIN',
       user: {
@@ -209,7 +225,7 @@ router.post('/auth/portal-login', async (req: Request, res: Response) => {
       "SELECT id, name, email, role FROM users WHERE LOWER(email) = $1 AND role = 'ADMIN' LIMIT 1",
       [normalized]
     );
-    if (dbAdmin.rows.length > 0 && password === 'admin123') {
+    if (dbAdmin.rows.length > 0 && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
       const u = dbAdmin.rows[0];
       return res.json({
         portal: 'ADMIN',
@@ -1117,6 +1133,22 @@ router.post('/admin/clear-orders', async (req: Request, res: Response) => {
 // Mount router on both '/api' and root '/' so both rewritten and non-rewritten URLs match
 app.use('/api', router);
 app.use('/', router);
+
+// Catch-all 404 handler for API routes
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
+// Global Express error handler ensuring JSON responses instead of HTML
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  console.error('Unhandled API Error:', err);
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      error: err.message || 'A server error occurred in API',
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+    });
+  }
+});
 
 // Export Express app as standard Vercel Serverless Function entry point
 export default app;

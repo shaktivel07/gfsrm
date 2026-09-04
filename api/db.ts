@@ -3,9 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  'postgresql://postgres.hhfnldvcfpwkssekrezp:9rttpCuipRe28YEJ@aws-0-us-east-1.pooler.supabase.com:6543/postgres';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+if (!DATABASE_URL) {
+  console.warn('CRITICAL WARNING: DATABASE_URL is not set in environment variables');
+}
 
 // Maintain a global cached connection pool across serverless function invocations
 declare global {
@@ -95,7 +96,17 @@ let schemaInitPromise: Promise<void> | null = null;
 export async function ensureDatabaseReady(): Promise<void> {
   if (!schemaInitPromise) {
     schemaInitPromise = (async () => {
-      // 1. Ensure all core tables exist (audit_logs table is intentionally omitted)
+      try {
+        // Fast path: Check if database tables already exist
+        const check = await pool.query("SELECT to_regclass('public.users') as exists");
+        if (check.rows[0]?.exists) {
+          return; // Database is already fully initialized!
+        }
+      } catch (err) {
+        console.warn('Fast table check failed, attempting initialization:', err);
+      }
+
+      // Slow path: initialize schema only if public.users is missing
       await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -196,16 +207,10 @@ export async function ensureDatabaseReady(): Promise<void> {
         CREATE INDEX IF NOT EXISTS ix_order_items_order_id ON order_items(order_id);
       `);
 
-      // 3. Ensure order_items cascade on delete
-      await pool.query(`
-        ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey;
-        ALTER TABLE order_items ADD CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
-      `);
-
-      // 4. Seed default SRM delivery locations
+      // 3. Seed default SRM delivery locations
       await seedDefaultLocations();
 
-      // 5. Seed default restaurant settings if none exist
+      // 4. Seed default restaurant settings if none exist
       const settingsCheck = await pool.query('SELECT id FROM restaurant_settings LIMIT 1');
       if (settingsCheck.rows.length === 0) {
         await pool.query(`

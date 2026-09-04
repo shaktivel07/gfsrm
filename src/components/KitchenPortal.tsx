@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Order } from '../types';
 import { Logo } from './Logo';
+import { apiFetch } from '../lib/api';
 
 interface KitchenPortalProps {
   onLogout: () => void;
@@ -28,9 +29,8 @@ export const KitchenPortal: React.FC<KitchenPortalProps> = ({ onLogout }) => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/orders/kitchen');
-      const data = await res.json();
-      if (res.ok) {
+      const data = await apiFetch<Order[]>('/api/orders/kitchen');
+      if (data) {
         setOrders(data);
       }
     } catch (err) {
@@ -49,14 +49,12 @@ export const KitchenPortal: React.FC<KitchenPortalProps> = ({ onLogout }) => {
   const updateStatus = async (orderId: number, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
+      await apiFetch(`/api/orders/${orderId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, actor: 'Kitchen Staff' }),
       });
-      if (res.ok) {
-        await fetchOrders();
-      }
+      await fetchOrders();
     } catch (err) {
       console.error('Error updating status:', err);
     } finally {

@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Order, UserProfile } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface OrderTrackingProps {
   user: UserProfile | null;
@@ -38,9 +39,8 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({
     else setRefreshing(true);
 
     try {
-      const res = await fetch(`/api/orders/my-orders?firebase_uid=${user.firebase_uid}`);
-      const data = await res.json();
-      if (res.ok) {
+      const data = await apiFetch<Order[]>(`/api/orders/my-orders?firebase_uid=${user.firebase_uid}`);
+      if (data) {
         setOrders(data);
         if (currentOrder) {
           const updated = data.find((o: Order) => o.id === currentOrder.id);

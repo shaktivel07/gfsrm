@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChefHat, Bike, ShieldCheck, X, ArrowRight, AlertCircle, Lock, Mail } from 'lucide-react';
 import { Logo } from './Logo';
+import { apiFetch } from '../lib/api';
 
 interface StaffLoginModalProps {
   isOpen: boolean;
@@ -34,16 +35,11 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/portal-login', {
+      const data = await apiFetch<any>('/api/auth/portal-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: u, password: p }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
-      }
 
       onLoginSuccess(data.portal, data.user);
       onClose();
@@ -54,10 +50,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
     }
   };
 
-  const handlePresetSelect = (portal: 'ADMIN' | 'KITCHEN' | 'DELIVERY', u: string, p: string) => {
+  const handlePortalSwitch = (portal: 'ADMIN' | 'KITCHEN' | 'DELIVERY') => {
     setSelectedPortal(portal);
-    setUsername(u);
-    setPassword(p);
+    setError('');
   };
 
   return (
@@ -85,7 +80,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
         <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-2xl mb-5 text-xs font-bold">
           <button
             type="button"
-            onClick={() => handlePresetSelect('ADMIN', 'admin@srmgoodfoods.com', 'admin123')}
+            onClick={() => handlePortalSwitch('ADMIN')}
             className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               selectedPortal === 'ADMIN'
                 ? 'bg-white text-amber-700 shadow-sm'
@@ -98,7 +93,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
           <button
             type="button"
-            onClick={() => handlePresetSelect('KITCHEN', 'srm', 'srm123')}
+            onClick={() => handlePortalSwitch('KITCHEN')}
             className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               selectedPortal === 'KITCHEN'
                 ? 'bg-white text-[#942626] shadow-sm'
@@ -111,7 +106,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
 
           <button
             type="button"
-            onClick={() => handlePresetSelect('DELIVERY', 'delivery', 'delivery123')}
+            onClick={() => handlePortalSwitch('DELIVERY')}
             className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               selectedPortal === 'DELIVERY'
                 ? 'bg-white text-emerald-700 shadow-sm'
@@ -175,29 +170,6 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 className="w-full pl-10 pr-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium text-stone-900 focus:bg-white focus:ring-2 focus:ring-[#942626] focus:border-[#942626] outline-none transition-all"
               />
             </div>
-          </div>
-
-          {/* Quick autofill helper */}
-          <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1">
-            <span>Preset Credentials:</span>
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedPortal === 'ADMIN') {
-                  setUsername('admin@srmgoodfoods.com');
-                  setPassword('admin123');
-                } else if (selectedPortal === 'KITCHEN') {
-                  setUsername('srm');
-                  setPassword('srm123');
-                } else {
-                  setUsername('delivery');
-                  setPassword('delivery123');
-                }
-              }}
-              className="text-[#942626] font-bold hover:underline"
-            >
-              Fill {selectedPortal.toLowerCase()} defaults
-            </button>
           </div>
 
           <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Phone, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
 import { UserProfile } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface PhoneModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/update-phone', {
+      const data = await apiFetch<any>('/api/auth/update-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,11 +66,6 @@ export const PhoneModal: React.FC<PhoneModalProps> = ({
           phone: formattedPhone,
         }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update phone number');
-      }
 
       if (onPhoneUpdated && data.user) onPhoneUpdated(data.user);
       if (onPhoneSaved) onPhoneSaved(formattedPhone);

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Order } from '../types';
 import { Logo } from './Logo';
+import { apiFetch } from '../lib/api';
 
 interface DeliveryDashboardProps {
   onLogout: () => void;
@@ -31,9 +32,8 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ onLogout }
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/orders/delivery');
-      const data = await res.json();
-      if (res.ok) {
+      const data = await apiFetch<Order[]>('/api/orders/delivery');
+      if (data) {
         setOrders(data);
       }
     } catch (err) {
@@ -62,16 +62,11 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({ onLogout }
 
     setVerifying(true);
     try {
-      const res = await fetch(`/api/orders/${selectedOrder.id}/verify-otp`, {
+      await apiFetch(`/api/orders/${selectedOrder.id}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpInput.trim(), actor: 'Delivery Executive' }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Invalid OTP');
-      }
 
       setOtpSuccess('OTP verified successfully! Order marked as Delivered.');
       setTimeout(() => {
