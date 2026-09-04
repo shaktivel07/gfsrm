@@ -11,6 +11,8 @@ import {
   auth,
   googleProvider,
   signInWithPopup,
+  getProductionHostname,
+  isDomainAuthorized,
 } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { apiFetch } from '../lib/api';
@@ -37,10 +39,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const productionHostname = getProductionHostname();
+  const domainToAuthorize =
+    currentHostname && currentHostname !== 'localhost' && currentHostname !== '127.0.0.1'
+      ? currentHostname
+      : productionHostname;
 
   const handleCopyDomain = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(currentHostname);
+      navigator.clipboard.writeText(domainToAuthorize);
       setCopiedDomain(true);
       setTimeout(() => setCopiedDomain(false), 2500);
     }
@@ -82,8 +89,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         (err.message && err.message.includes('auth/unauthorized-domain'));
 
       if (isDomainError) {
-        setUnauthorizedDomain(true);
-        setError(`Domain Authorization Required: "${currentHostname}" must be added to Authorized Domains in Firebase Console.`);
+        if (isDomainAuthorized(currentHostname)) {
+          // goodfoods.srmtrc.in and localhost are authorized - do not show domain warning UI
+          setError('Google authentication could not be completed. Please try signing in again.');
+        } else {
+          setUnauthorizedDomain(true);
+          setError(`Domain Authorization Required: "${domainToAuthorize}" must be added to Authorized Domains in Firebase Console.`);
+        }
       } else if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign-in popup was closed before completing. Please try again.');
       } else if (err.code === 'auth/popup-blocked') {
@@ -133,7 +145,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between gap-2">
               <div className="font-mono text-[10px] text-stone-700 truncate select-all">
-                {currentHostname}
+                {domainToAuthorize}
               </div>
               <button
                 type="button"

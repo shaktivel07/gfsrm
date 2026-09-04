@@ -30,3 +30,38 @@ export {
   onAuthStateChanged,
 };
 export type { User };
+
+// Production hostname configured dynamically via VITE_APP_URL, defaulting to goodfoods.srmtrc.in
+export const getProductionHostname = (): string => {
+  const envUrl = env.VITE_APP_URL || '';
+  if (envUrl) {
+    try {
+      return new URL(envUrl.startsWith('http') ? envUrl : `https://${envUrl}`).hostname;
+    } catch {
+      return envUrl.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+  return 'goodfoods.srmtrc.in';
+};
+
+// Check if a given hostname is an accepted/authorized domain for SRM Good Foods
+export const isDomainAuthorized = (hostname: string): boolean => {
+  if (!hostname) return true;
+  const prodHost = getProductionHostname().toLowerCase();
+  const cleanHost = hostname.toLowerCase().trim();
+
+  // Explicitly authorize goodfoods.srmtrc.in, dynamic VITE_APP_URL, and standard development hosts
+  if (
+    cleanHost === 'goodfoods.srmtrc.in' ||
+    cleanHost === prodHost ||
+    cleanHost === 'localhost' ||
+    cleanHost === '127.0.0.1' ||
+    cleanHost.endsWith('.srmtrc.in') ||
+    cleanHost.endsWith('.run.app') ||
+    cleanHost.endsWith('.firebaseapp.com') ||
+    cleanHost.endsWith('.web.app')
+  ) {
+    return true;
+  }
+  return false;
+};

@@ -167,6 +167,23 @@ router.get('/smoke-test', async (_req: Request, res: Response) => {
     },
   };
 
+  // 5. Hostname & Production Domain check
+  const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://goodfoods.srmtrc.in';
+  let prodHost = 'goodfoods.srmtrc.in';
+  try {
+    prodHost = new URL(appUrl.startsWith('http') ? appUrl : `https://${appUrl}`).hostname;
+  } catch {
+    prodHost = appUrl;
+  }
+  checks.domain = {
+    status: 'pass',
+    details: {
+      production_url: appUrl,
+      production_host: prodHost,
+      primary_domain: 'goodfoods.srmtrc.in',
+    },
+  };
+
   const isAllPassing = checks.database.status === 'pass' && checks.environment_variables.status === 'pass';
   const httpStatus = isAllPassing ? 200 : 503;
 

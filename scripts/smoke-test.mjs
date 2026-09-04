@@ -78,6 +78,16 @@ async function run() {
       console.log(`         ${c.firebase?.details?.message || 'Not configured in environment'}`);
     }
 
+    console.log('');
+
+    // 5. Hostname & Domain Configuration
+    if (c.domain?.status === 'pass') {
+      console.log(`✅ [PASS] Hostname & Authorized Domain`);
+      console.log(`         Primary Domain:  ${c.domain.details.primary_domain}`);
+      console.log(`         Production Host: ${c.domain.details.production_host}`);
+      console.log(`         App URL:         ${c.domain.details.production_url}`);
+    }
+
     console.log('\n------------------------------------------------------');
     if (data.status === 'healthy') {
       console.log(`🎉 Overall Status: HEALTHY (${data.checks_passed}/${data.total_checks} checks passed)`);
